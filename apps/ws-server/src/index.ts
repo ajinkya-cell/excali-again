@@ -1,0 +1,145 @@
+import { WebSocketServer, WebSocket } from "ws";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { prismaClient } from "@repo/db/clients";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+/* -------------------- TYPES -------------------- */
+
+interface User {
+  ws: WebSocket;
+  userId: number;
+  rooms: string[];
+}
+
+/* -------------------- SERVER -------------------- */
+
+const wss = new WebSocketServer({ port: 8080 });
+const users: User[] = [];
+
+console.log("✅ WebSocket server running on ws://localhost:8080");
+
+/* -------------------- AUTH -------------------- */
+
+function verifyUser(token: string | null): number | null {
+  if (!token) {
+    console.log("❌ Missing token");
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JwtPayload;
+
+    console.log("✅ JWT decoded:", decoded);
+
+    if (!decoded || typeof decoded !== "object" || !decoded.id) {
+      console.log("❌ Token missing id");
+      return null;
+    }
+
+    return Number(decoded.id);
+  } catch (err) {
+    console.log("❌ JWT verification failed:", err);
+    return null;
+  }
+}
+
+/* -------------------- CONNECTION -------------------- */
+
+wss.on("connection", (ws, request) => {
+  console.log("🔌 Incoming connection");
+
+  ws.on("close", (code, reason) => {
+    console.log("❌ Socket closed", code, reason.toString());
+    const index = users.findIndex(u => u.ws === ws);
+    if (index !== -1) {
+      users.splice(index, 1);
+    }
+  });
+
+  /* SAFE URL PARSING */
+  const url = new URL(request.url!, "http://localhost");
+  const token = url.searchParams.get("token");
+
+  const userId = verifyUser(token);
+
+  if (!userId) {
+    ws.close(1008, "Authentication failed");
+    return;
+  }
+
+  console.log("✅ User connected:", userId);
+
+  const user: User = {
+    ws,
+    userId,
+    rooms: [],
+  };
+
+  users.push(user);
+
+  /* -------------------- MESSAGE HANDLER -------------------- */
+
+  ws.on("message", async (data) => {
+    let payload: any;
+
+    try {
+      payload = JSON.parse(data.toString());
+    } catch {
+      ws.send(JSON.stringify({ error: "Invalid JSON" }));
+      return;
+    }
+
+    console.log("📩 Received:", payload);
+
+    /* JOIN ROOM */
+    if (payload.type === "join_room") {
+      if (!user.rooms.includes(payload.roomId)) {
+        user.rooms.push(payload.roomId);
+      }
+      return;
+    }
+
+    /* LEAVE ROOM */
+    if (payload.type === "leave_room") {
+      user.rooms = user.rooms.filter(r => r !== payload.roomId);
+      return;
+    }
+
+    /* CHAT */
+    if (payload.type === "chat") {
+      const { roomId, message } = payload;
+
+      if (!roomId || !message) return;
+
+      /* SAVE TO DB SAFELY */
+      try {
+        await prismaClient.chat.create({
+          data: {
+            roomid: Number(roomId),
+            message,
+            userId,
+          },
+        });
+      } catch (err) {
+        console.error("❌ Prisma error:", err);
+      }
+
+      /* BROADCAST */
+      users.forEach(u => {
+        if (u.rooms.includes(roomId)) {
+          u.ws.send(JSON.stringify({
+            type: "chat",
+            roomId,
+            message,
+            userId,
+          }));
+        }
+      });
+    }
+  });
+});

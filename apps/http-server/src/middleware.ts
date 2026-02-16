@@ -1,0 +1,41 @@
+import jwt  from "jsonwebtoken";
+import { JwtPayload } from "jsonwebtoken";
+import { Request,Response,NextFunction} from "express";
+// interface midreq extends Request{
+//    userid:string
+// }
+
+type decode ={
+    id:number 
+}
+
+export function Middleware(req : Request,res:Response,next : NextFunction){
+    const token = req.headers.authorization?? "";
+    console.log("Middleware called with token:", token);
+    console.log("Middleware JWT_SECRET:", process.env.JWT_SECRET);
+    
+    if( token !== "" ){
+    try {
+        const decoded :decode = jwt.verify(token as string, process.env.JWT_SECRET as string) as decode
+        console.log("Decoded token:", decoded);
+        if(decoded){
+            req.userid = decoded.id ;
+            next();
+        } else{
+            res.status(403).json({
+                msg:"incorrect token"
+            })
+        }
+    } catch(e) {
+        // console.error("Token verification failed:", e);
+        res.status(403).json({
+            msg:"incorrect token"
+        })
+    }
+    }else{
+         res.status(403).json({
+            msg:"login first"
+        })
+    }
+    
+}
