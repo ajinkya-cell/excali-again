@@ -9,5 +9,6 @@ export default async function Canvas({
 }){
     const {roomid} = await params;
     console.log(roomid);
+    console.log("hello")
     return <Roomcanvas roomid={roomid} />
 }

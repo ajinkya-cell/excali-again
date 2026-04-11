@@ -36,7 +36,7 @@ export function Canvaspage({roomid,WebSocket,slug}:{
         }
         
         const toolchange =(newtool:string)=>{
-            sethighlight(newtool)
+            sethighlight(newtool) 
             tool.current=newtool
         }
 
