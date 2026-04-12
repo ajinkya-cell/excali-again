@@ -59,7 +59,9 @@ export default function Home(){
             const id = res.data.userId;
             if(id){ 
                 try{
-                const Roomres  = await axios.get(`${http}/userRooms/${id}`)
+                const Roomres  = await axios.get(`${http}/userRooms`,{
+                    headers: { Authorization: token }
+                })
                 const rooms  =Roomres.data.data
                 const lastroom = rooms[rooms.length - 1];
                 const roomidres  = await axios.get(`${http}/room/${lastroom.slug}`)

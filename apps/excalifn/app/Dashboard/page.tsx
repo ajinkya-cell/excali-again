@@ -29,7 +29,9 @@ export default function  Dashboard() {
         setuserid(resid)
         setloading(false)
         if(resid !== null){
-          const roomres = await axios.get(`${http}/userRooms/${resid}`)
+          const roomres = await axios.get(`${http}/userRooms`,{
+            headers: { Authorization: token },
+          })
           if(roomres){
             setrooms(roomres.data.data);
             
@@ -92,8 +94,13 @@ export default function  Dashboard() {
     }
   }
   const deleteroom=async(slug:string)=>{
-    await axios.get(`${http}/closeroom/${slug}`);
-    const roomres = await axios.get(`${http}/userRooms/${userid}`)
+    const token = localStorage.getItem("jwtToken");
+    await axios.delete(`${http}/closeroom/${slug}`,{
+      headers: { Authorization: token },
+    });
+    const roomres = await axios.get(`${http}/userRooms`,{
+      headers: { Authorization: token },
+    })
           if(roomres){
             setrooms(roomres.data.data);
           }

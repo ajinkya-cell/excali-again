@@ -7,10 +7,18 @@ import * as bcrypt from "bcrypt";
 import cors from "cors"
 require('dotenv').config();
 const app = express();
-const saltRounds = 3;
+const saltRounds = 10;
 
 app.use(express.json())
-app.use(cors());
+
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",")
+  : ["http://localhost:3000", "http://localhost:3002"];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 app.post("/signUp", async (req, res) => {
     // 1. Validate input
@@ -54,7 +62,6 @@ app.post("/signUp", async (req, res) => {
 
 app.post("/signIn",async (req,res)=>{
     const zodvalidation = SiginSchema.safeParse(req.body);
-    console.log("SignIn request:", req.body);
     if(!zodvalidation.success){
         res.status(403).json({
             msg:"Invalid inputs",
@@ -90,7 +97,6 @@ app.post("/signIn",async (req,res)=>{
         }
         const id = response.id
         const secret = process.env.JWT_SECRET as string;
-        console.log(secret);
         const token = jwt.sign({id} , secret);
         res.json({
             msg : "logged in ",
@@ -134,7 +140,7 @@ app.post("/create-room",Middleware,async (req,res)=>{
     
 })
 
-app.get("/chats/:roomId",async (req,res)=>{
+app.get("/chats/:roomId",Middleware,async (req,res)=>{
     const roomid = Number(req.params.roomId);
     const message = await prismaClient.chat.findMany({
         where:{
@@ -150,7 +156,7 @@ app.get("/chats/:roomId",async (req,res)=>{
     return 
 })
 
-app.get("/chats/:slug",async (req,res)=>{
+app.get("/room-by-slug/:slug",Middleware,async (req,res)=>{
     const slug = req.params.slug
     const roomid =await prismaClient.rooms.findFirst({
         where:{
@@ -161,7 +167,7 @@ app.get("/chats/:slug",async (req,res)=>{
         }
     })
     if(!roomid){
-        res.status(403).json({
+        return res.status(404).json({
             msg:"no room"
         })
     }
@@ -229,40 +235,47 @@ app.get("/verify-token", Middleware, (req, res) => {
   res.json({ valid: true, userId: req.userid });
 });
 // show rooms created by user in frontend
-app.get("/userRooms/:id",async (req, res) => {
-    const id = req.params.id
-    console.log(id)
+app.get("/userRooms",Middleware,async (req, res) => {
+    const id = req.userid;
+    if(!id){
+        return res.status(403).json({ msg: "unauthorized" });
+    }
     const rooms = await prismaClient.rooms.findMany({
     where:{
-        adminId:Number(id)
+        adminId:id
     },
     select:{
         slug:true
     },
     orderBy:{slug: 'asc'}
     })
-    console.log(rooms)
     res.json({
         data:rooms
     });
 });
 
-app.get("/closeroom/:slug",async (req,res)=>{
+app.delete("/closeroom/:slug",Middleware,async (req,res)=>{
     const id = req.userid;
+    if(!id){
+        return res.status(403).json({ msg: "unauthorized" });
+    }
     const slug = req.params.slug
     try{
-       await prismaClient.rooms.deleteMany({
+       const result = await prismaClient.rooms.deleteMany({
             where:{
-                id:id,
+                adminId:id,
                 slug:slug
             }
         })
+        if(result.count === 0){
+            return res.status(404).json({ msg: "room not found or not owned by you" });
+        }
         res.json({
             msg:"deleted the room"
         })
     }catch(e){
-        res.status(403).json({
-            msg:"some error to delete room"
+        res.status(500).json({
+            msg:"error deleting room"
         })
     }
 })
