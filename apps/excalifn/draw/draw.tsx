@@ -1,31 +1,11 @@
 import { http } from "@/components/endpoints";
 import axios from "axios"
 import { RefObject } from "react";
+import { Shape, Handle, ispointinshape, checkselection, insidehandle, ishandleclicked, getCanvasCoords, sizingcal } from "./utils";
 
-type shapes ={
-    id:number,
-    type:"rect",
-    x:number,
-    y:number,
-    width:number,
-    height:number
-} | {
-    id:number,
-    type:"circle",
-    x:number,
-    y:number,
-    raidus:number,
-    startangle:0,
-    endangle:6.28
-} 
+type shapes = Shape
 
-type handles = {
-    x:number,
-    y:number,
-    r:number
-    id:number,
-    position:"topleft" | "topright" | "bottomleft" | "bottomright"
-}
+type handles = Handle
 
 export default async function  intindraw(canvas:HTMLCanvasElement,roomId:string,WebSocket:WebSocket,tool:RefObject<string>){
     const existing: shapes[] =  await getExistingshapes(roomId); 
@@ -108,7 +88,7 @@ export default async function  intindraw(canvas:HTMLCanvasElement,roomId:string,
                         handleposition =hanlde
                         sizing = true;
                     }
-                    const newselection = checkselection(existing,startx,starty,ctx)
+                    const newselection = checkselection(existing,startx,starty)
                     if(newselection){
                         if(newselection !== selectedShapeId){
                             selectedShapeId = newselection;
@@ -290,7 +270,7 @@ export default async function  intindraw(canvas:HTMLCanvasElement,roomId:string,
              }
                 if(tool.current == "erase"){
                     const { x: mouseX, y: mouseY } = getCanvasCoords(canvas, e);
-                    const eraseshape = checkselection(existing,mouseX,mouseY,ctx);
+                    const eraseshape = checkselection(existing,mouseX,mouseY);
                     if(eraseshape){
                         shapetoease =eraseshape
                         console.log(shapetoease);
@@ -379,43 +359,6 @@ async function  getExistingshapes(roomId : string){
     return shapes
 }
 
-function checkselection(existing:shapes[],startx:number,starty:number,ctx:CanvasRenderingContext2D){
-    let selectedshape : shapes | null = null;
-    for(let i = existing.length -1 ; i>=0;i--){
-        const isSelected = ispointinshape(existing[i],startx,starty)
-        if(isSelected){
-            selectedshape = existing[i]
-        break;
-        }
-    }
-    if(selectedshape){
-                return selectedshape.id
-    }else{
-        return null
-    }
-    return null
-}
-
-function ispointinshape(shape:shapes ,startx:number,starty:number,){
-    if(shape.type == 'rect'){
-    const left   = Math.min(shape.x, shape.x + shape.width);
-    const right  = Math.max(shape.x, shape.x + shape.width);
-    const top    = Math.min(shape.y, shape.y + shape.height);
-    const bottom = Math.max(shape.y, shape.y + shape.height);
-        return ( 
-        startx >= left&&
-        startx <= right &&
-        starty >= top && 
-        starty <= bottom
-        )
-    }else if(shape.type == 'circle'){
-    const dx = startx - shape.x;
-    const dy = starty - shape.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    return distance <= shape.raidus
-    }
-    return false;   
-}
 
 function drawCircle(ctx : CanvasRenderingContext2D,x:number, y:number, r:number,circleshandles:handles[],selectedShapeId:number,position:handles["position"]){
   ctx.beginPath();
@@ -427,36 +370,4 @@ function drawCircle(ctx : CanvasRenderingContext2D,x:number, y:number, r:number,
   ctx.stroke();
   circleshandles.push({x, y, r,id:selectedShapeId,position})
   
-}
-
-function ishandleclicked(circleshandles:handles[],startx:number,starty:number){
-    for(const h of circleshandles){
-        if (insidehandle(h, startx, starty)) {
-            return h.position; 
-        }
-    }
-    return null
-}
-function insidehandle(shape:handles ,startx:number,starty:number,){
-    if(shape){
-        const dx = startx - shape.x;
-        const dy = starty - shape.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance <= shape.r
-    }
-    return false;   
-}
-
-function getCanvasCoords(canvas: HTMLCanvasElement, e: MouseEvent) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
-}
-
-function sizingcal(startx:number,starty:number,endx:number,endy:number){
-    const width = endx - startx;
-    const height = endy - starty
-    return {height,width}
 }
