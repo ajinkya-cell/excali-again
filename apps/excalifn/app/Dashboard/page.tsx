@@ -118,8 +118,8 @@ export default function  Dashboard() {
                 <Button btndisable={disable} btnscale={false} btnfunction={()=>Joinroom()} btnsize="medium" prop="blue" content={disable?"...":"Join"}/>
                 </div>
                 <div className="flex items-start px-2 mt-[10px] w-full justify-between ">
-                  <h1 className="text-white/40">Previous</h1> 
-                  <h1 className="text-red-400/70">{newerror}</h1>
+                  <h1 className="text-white/40 font-serif text-xl">Previous</h1> 
+                  <h1 className="text-red-400/70 font-mono text-sm">{newerror}</h1>
                 </div>
                 <div className="border-white/10 h-[400px] w-full border rounded-md mt-[10px] p-2 flex flex-col gap-2 overflow-y-scroll">
                 {rooms !== null && rooms.map((e:{slug:string})=>{

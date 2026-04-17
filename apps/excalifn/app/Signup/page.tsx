@@ -1,16 +1,10 @@
 "use client"
 import Link from "next/link";
 import { Button } from "@/components/Button";
-import { Mochiy_Pop_One, Outfit } from "next/font/google";
 import {useForm ,SubmitHandler } from "react-hook-form"
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { http } from "@/components/endpoints";
-const mochiy = Mochiy_Pop_One({
-  weight: "400", // only one weight available
-  subsets: ["latin"],
-  variable: "--font-mochiy",
-});
 
 type m = {
   origin: string;
@@ -21,11 +15,7 @@ type m = {
   message: string;
 };
 
-const outfit = Outfit({
-  subsets: ["latin"],
-   weight: ["300","700"],
-  variable: "--font-outfit", // optional CSS variable
-});
+
 
 export default function Signup() {
   const router =  useRouter()
@@ -70,11 +60,11 @@ console.log(msgs)
           <div className="flex w-full h-full justify-center">
         <div className="flex flex-col justify-center items-center gap-6">
             <div>
-            <h1 className={`${mochiy.className} text-xl`} >Playboard</h1>
+            <h1 className={`font-serif text-xl`} >Playboard</h1>
             </div>
             <form onSubmit={handleSubmit(onsubmit)}>
               <div>
-                <h2 className={`${outfit.className} mb-2`}> Name</h2>
+                <h2 className={`font-sans mb-2`}> Name</h2>
                 <input {...register("username",{
                 required:"name is required",
                 minLength:{value:5,message:"atleast 5 character long"}})} 
@@ -82,7 +72,7 @@ console.log(msgs)
                 {errors.username && <h2 className="text-red-400">{errors.username.message}</h2>}
             </div>
             <div>
-                <h2 className={`${outfit.className} mb-2`}>Email Address</h2>
+                <h2 className={`font-sans mb-2`}>Email Address</h2>
                 <input {...register("email",{
                 required:"email is required",
                 pattern: {
@@ -93,7 +83,7 @@ console.log(msgs)
                 {errors.email && <h2 className="text-red-400">{errors.email.message}</h2>}
             </div>
             <div>
-                <h2 className={`${outfit.className} mb-2`}> Password</h2>
+                <h2 className={`font-sans mb-2`}> Password</h2>
                 <input 
                 type="password"
                 {...register("password",{
@@ -107,9 +97,9 @@ console.log(msgs)
                 </div>
             </form>
             <div className="flex gap-2">
-                <h2 className={`${outfit.className} text-md`}> Already have accound ?</h2> 
+                <h2 className={`font-sans text-md`}> Already have accound ?</h2> 
                 <Link href="/Signin">
-                <h2 className={`${outfit.className} text-md text-[#0099ff] hover:text-white hover:drop-shadow-[0_0_10px_rgba(0,115,255,0.9)] transition duration-300 cursor-pointer` }> Signin</h2>
+                <h2 className={`font-sans text-md text-[#0099ff] hover:text-white hover:drop-shadow-[0_0_10px_rgba(0,115,255,0.9)] transition duration-300 cursor-pointer` }> Signin</h2>
                 </Link>
             </div>
         </div>
