@@ -110,34 +110,73 @@ wss.on("connection", (ws, request) => {
       return;
     }
 
-    /* CHAT */
+    /* CHAT — add new shape */
     if (payload.type === "chat") {
       const { roomId, message } = payload;
-
       if (!roomId || !message) return;
 
-      /* SAVE TO DB SAFELY */
+      let dbId: number | undefined;
       try {
-        await prismaClient.chat.create({
-          data: {
-            roomid: Number(roomId),
-            message,
-            userId,
-          },
+        const created = await prismaClient.chat.create({
+          data: { roomid: Number(roomId), message, userId },
         });
+        dbId = created.id;
       } catch (err) {
-        console.error("❌ Prisma error:", err);
+        console.error("❌ Prisma error (create):", err);
       }
 
-      /* BROADCAST */
       users.forEach(u => {
         if (u.rooms.includes(roomId)) {
-          u.ws.send(JSON.stringify({
-            type: "chat",
-            roomId,
-            message,
-            userId,
-          }));
+          u.ws.send(JSON.stringify({ type: "chat", roomId, message, userId, id: dbId }));
+        }
+      });
+    }
+
+    /* DELETE SHAPE — erase from DB permanently */
+    if (payload.type === "delete_shape") {
+      const { id, roomId } = payload;
+      if (!id || !roomId) return;
+
+      try {
+        await prismaClient.chat.delete({
+          where: { id: Number(id) },
+        });
+        console.log(`🗑️ Deleted shape/chat id=${id}`);
+      } catch (err) {
+        console.error("❌ Prisma error (delete):", err);
+      }
+
+      /* Broadcast so other connected clients remove it too */
+      users.forEach(u => {
+        if (u.rooms.includes(roomId)) {
+          u.ws.send(JSON.stringify({ type: "delete_shape", id: Number(id), roomId }));
+        }
+      });
+    }
+
+    /* MOVE / RESIZE SHAPE — update serialised JSON in DB */
+    if (payload.type === "move_shape") {
+      const { roomId, message } = payload;
+      if (!roomId || !message) return;
+
+      try {
+        const parsed = JSON.parse(message);
+        const shapeId = Number(parsed?.shape?.id);
+        if (!shapeId) return;
+
+        await prismaClient.chat.update({
+          where: { id: shapeId },
+          data:  { message },
+        });
+        console.log(`✏️ Updated shape id=${shapeId}`);
+      } catch (err) {
+        console.error("❌ Prisma error (update):", err);
+      }
+
+      /* Broadcast to other clients in the room */
+      users.forEach(u => {
+        if (u.rooms.includes(roomId)) {
+          u.ws.send(JSON.stringify({ type: "move_shape", roomId, message }));
         }
       });
     }

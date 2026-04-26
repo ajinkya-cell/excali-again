@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Instrument_Serif, Outfit } from "next/font/google";
+import { Geist_Mono, Instrument_Serif, Outfit, Kalam } from "next/font/google";
 
 import "./globals.css";
 
@@ -19,9 +19,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const kalam = Kalam({
+  weight: ["300", "400", "700"],
+  subsets: ["latin"],
+  variable: "--font-kalam",
+});
+
 export const metadata: Metadata = {
-  title: "Excalidraw Clone",
-  description: "Excalidraw clone created by Ajinkya",
+  title: "DoodleBoard",
+  description: "Collaborative real-time sketchboard by Ajinkya",
 };
 
 export default function RootLayout({
@@ -32,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${outfit.variable} ${instrumentSerif.variable} ${geistMono.variable} antialiased font-sans`}
+        className={`${outfit.variable} ${instrumentSerif.variable} ${geistMono.variable} ${kalam.variable} antialiased font-sans`}
       >
         {children}
       </body>
