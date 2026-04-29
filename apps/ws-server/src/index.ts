@@ -15,10 +15,11 @@ interface User {
 
 /* -------------------- SERVER -------------------- */
 
-const wss = new WebSocketServer({ port: 8080 });
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8080;
+const wss = new WebSocketServer({ port: PORT });
 const users: User[] = [];
 
-console.log("✅ WebSocket server running on ws://localhost:8080");
+console.log(`✅ WebSocket server running on port ${PORT}`);
 
 /* -------------------- AUTH -------------------- */
 
