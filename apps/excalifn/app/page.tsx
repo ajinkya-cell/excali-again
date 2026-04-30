@@ -188,15 +188,15 @@ export default function Home() {
                     <div className="font-serif text-xl text-white/80">
                         Doodle<span className="italic" style={{ color: '#c084fc' }}>Board</span>
                     </div>
-                    <p className="font-sans text-white/30 text-sm">Made by Avi</p>
+                    <p className="font-sans text-white/30 text-sm">Made by Ajinkya</p>
                     <div className="flex items-center gap-5">
-                        <Link href="https://github.com/adi-ty-a" target="_blank" rel="noopener noreferrer">
+                        <Link href="https://github.com/ajinkya-cell" target="_blank" rel="noopener noreferrer">
                             <FaGithub className="text-white/40 hover:text-white w-5 h-5 transition-colors duration-200" />
                         </Link>
-                        <Link href="https://x.com/avi_0t" target="_blank" rel="noopener noreferrer">
+                        <Link href="https://x.com/ajinkyacell" target="_blank" rel="noopener noreferrer">
                             <SlSocialTwitter className="text-white/40 hover:text-white w-5 h-5 transition-colors duration-200" />
                         </Link>
-                        <Link href="https://www.linkedin.com/in/aditya-srivastava-662829317/" target="_blank" rel="noopener noreferrer">
+                        <Link href="https://www.linkedin.com/in/ajinkya-dharkar-a844b1258/" target="_blank" rel="noopener noreferrer">
                             <TbBrandLinkedin className="text-white/40 hover:text-white w-5 h-5 transition-colors duration-200" />
                         </Link>
                     </div>
