@@ -7,6 +7,7 @@ import { LuCircle, LuRectangleHorizontal } from "react-icons/lu";
 import { FaRegHand } from "react-icons/fa6";
 import { RxEraser, RxExit } from "react-icons/rx";
 import { RiText } from "react-icons/ri";
+import { BiSolidArrowFromBottom } from "react-icons/bi";
 
 type TextOverlay = { x: number; y: number; canvasX: number; canvasY: number } | null;
 
@@ -80,6 +81,7 @@ export function Canvaspage({ roomid, WebSocket, slug }: {
     const tools = [
         { id: "rec",    icon: <LuRectangleHorizontal className="w-[18px] h-[18px]" />, label: "Rectangle" },
         { id: "circle", icon: <LuCircle className="w-[18px] h-[18px]" />,              label: "Circle" },
+        { id: "arrow",  icon: <BiSolidArrowFromBottom className="w-[18px] h-[18px]" />, label: "Arrow" },
         { id: "text",   icon: <RiText className="w-[18px] h-[18px]" />,                label: "Text — click canvas to place" },
         { id: "select", icon: <FaRegHand className="w-[18px] h-[18px]" />,             label: "Move / Resize" },
         { id: "erase",  icon: <RxEraser className="w-[18px] h-[18px]" />,              label: "Erase — click a shape" },
@@ -168,7 +170,7 @@ export function Canvaspage({ roomid, WebSocket, slug }: {
             <canvas
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full"
-                style={{ cursor: highlight === "text" ? "text" : highlight === "erase" ? "crosshair" : "default" }}
+                style={{ cursor: highlight === "text" ? "text" : highlight === "erase" || highlight === "arrow" ? "crosshair" : "default" }}
                 onClick={handleCanvasClick}
             />
 

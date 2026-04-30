@@ -11,6 +11,9 @@ export type shapes = {
 } | {
     id: number, type: "text",
     x: number, y: number, text: string, fontSize: number
+} | {
+    id: number, type: "arrow",
+    startX: number, startY: number, endX: number, endY: number
 }
 
 type handles = {
@@ -95,9 +98,11 @@ export default async function intindraw(
     let clicked = false, sizing = false, isDragging = false;
     let startx = 0, starty = 0;
     let shapestartx = 0, shapestarty = 0;
+    let arrowStartX = 0, arrowStartY = 0, arrowEndX = 0, arrowEndY = 0;
     let sizestartx = 0, sizestarty = 0;
     let initialwidth = 0, initialheight = 0;
     let initialFontSize = 20, sizeInitDist = 0;
+    let activeHandle: handles["position"] | null = null;
 
     // ── MOUSEDOWN ──
     const onDown = (e: MouseEvent) => {
@@ -125,6 +130,7 @@ export default async function intindraw(
             const handle = isHandleClicked(circleshandles, x, y);
             if (handle) {
                 sizing = true;
+                activeHandle = handle;
                 const sel = existing.find(e => e.id === selectedShapeId);
                 if (sel?.type === "rect") {
                     initialwidth = sel.width; initialheight = sel.height;
@@ -138,6 +144,9 @@ export default async function intindraw(
                     const h = lines.length * sel.fontSize * 1.3;
                     sizeInitDist = Math.hypot(x - (sel.x + w/2), y - (sel.y + h/2)) || 1;
                     initialFontSize = sel.fontSize;
+                } else if (sel?.type === "arrow") {
+                    sizestartx = sel.startX; sizestarty = sel.startY;
+                    arrowEndX = sel.endX; arrowEndY = sel.endY;
                 }
                 return;
             }
@@ -147,11 +156,16 @@ export default async function intindraw(
             isDragging = false;
             if (hit !== null) {
                 const sel = existing.find(e => e.id === hit)!;
-                shapestartx = sel.x; shapestarty = sel.y;
+                if (sel.type === "arrow") {
+                    shapestartx = sel.startX; shapestarty = sel.startY;
+                    arrowEndX = sel.endX; arrowEndY = sel.endY;
+                }
+                else { shapestartx = sel.x; shapestarty = sel.y; }
                 isDragging = true;
                 if (sel.type === "rect") { initialwidth = sel.width; initialheight = sel.height; sizestartx = sel.x; sizestarty = sel.y; }
                 else if (sel.type === "circle") { sizestartx = sel.x; sizestarty = sel.y; }
                 else if (sel.type === "text") { initialFontSize = sel.fontSize; }
+                else if (sel.type === "arrow") { shapestartx = sel.startX; shapestarty = sel.startY; }
             }
             clearCanvas(existing, canvas, ctx, circleshandles, selectedShapeId);
         }
@@ -170,6 +184,8 @@ export default async function intindraw(
             ctx.beginPath();
             ctx.arc(startx, starty, Math.abs((mx - startx) / 2), 0, Math.PI * 2);
             ctx.stroke();
+        } else if (tool.current === "arrow") {
+            drawArrow(ctx, startx, starty, mx, my);
         } else if (tool.current === "select") {
             if (sizing) {
                 const sel = existing.find(e => e.id === selectedShapeId);
@@ -190,13 +206,31 @@ export default async function intindraw(
                         const h = lines.length * sel.fontSize * 1.3;
                         const newDist = Math.hypot(mx - (sel.x + w/2), my - (sel.y + h/2));
                         sel.fontSize = Math.max(10, Math.round(initialFontSize * newDist / sizeInitDist));
+                    } else if (sel.type === "arrow") {
+                        const dx = mx - startx, dy = my - starty;
+                        if (activeHandle === "topleft" || activeHandle === "bottomleft") {
+                            sel.startX = sizestartx + dx;
+                            sel.startY = sizestarty + dy;
+                        }
+                        else if (activeHandle === "topright" || activeHandle === "bottomright") {
+                            sel.endX = arrowEndX + dx;
+                            sel.endY = arrowEndY + dy;
+                        }
                     }
                 }
             } else {
                 const sel = existing.find(e => e.id === selectedShapeId);
                 if (sel && isDragging) {
-                    sel.x = shapestartx + (mx - startx);
-                    sel.y = shapestarty + (my - starty);
+                    if (sel.type === "arrow") {
+                        const dx = mx - startx, dy = my - starty;
+                        sel.startX = shapestartx + dx;
+                        sel.startY = shapestarty + dy;
+                        sel.endX = arrowEndX + dx;
+                        sel.endY = arrowEndY + dy;
+                    } else {
+                        sel.x = shapestartx + (mx - startx);
+                        sel.y = shapestarty + (my - starty);
+                    }
                 }
             }
         }
@@ -216,12 +250,23 @@ export default async function intindraw(
             const shape: shapes = { id: genId(), type: "circle", x: startx, y: starty, raidus: Math.abs((mx - startx)/2), startangle: 0, endangle: 6.28 };
             existing.push(shape);
             ws.send(JSON.stringify({ type: "chat", message: JSON.stringify({ shape }), roomId }));
+        } else if (tool.current === "arrow") {
+            const shape: shapes = { id: genId(), type: "arrow", startX: startx, startY: starty, endX: mx, endY: my };
+            existing.push(shape);
+            ws.send(JSON.stringify({ type: "chat", message: JSON.stringify({ shape }), roomId }));
         } else if (tool.current === "select") {
-            if (sizing) { sizing = false; }
+            if (sizing) { sizing = false; activeHandle = null; }
             else {
                 isDragging = false;
-                const sel = existing.find(e => e.id === selectedShapeId);
-                if (sel) { sizestartx = sel.x; sizestarty = sel.y; shapestartx = sel.x; shapestarty = sel.y; }
+            const sel = existing.find(e => e.id === selectedShapeId);
+            if (sel) {
+                if (sel.type === "arrow") {
+                    sizestartx = sel.startX; sizestarty = sel.startY;
+                    shapestartx = sel.startX; shapestarty = sel.startY;
+                    arrowEndX = sel.endX; arrowEndY = sel.endY;
+                }
+                else { sizestartx = sel.x; sizestarty = sel.y; shapestartx = sel.x; shapestarty = sel.y; }
+            }
             }
             const sel = existing.find(e => e.id === selectedShapeId);
             if (sel) ws.send(JSON.stringify({ type: "move_shape", message: JSON.stringify({ shape: sel }), roomId }));
@@ -267,6 +312,9 @@ function clearCanvas(
             ctx.font = `${shape.fontSize}px 'Kalam', cursive`;
             ctx.textBaseline = "top";
             shape.text.split("\n").forEach((line, i) => ctx.fillText(line, shape.x, shape.y + i * shape.fontSize * 1.3));
+        } else if (shape.type === "arrow") {
+            ctx.strokeStyle = SHAPE_CLR;
+            drawArrow(ctx, shape.startX, shape.startY, shape.endX, shape.endY);
         }
     });
 
@@ -311,6 +359,17 @@ function clearCanvas(
         drawHandle(ctx, bx + bw, by,      circleshandles, sid, "topright");
         drawHandle(ctx, bx,      by + bh, circleshandles, sid, "bottomleft");
         drawHandle(ctx, bx + bw, by + bh, circleshandles, sid, "bottomright");
+    } else if (sel.type === "arrow") {
+        const pad = 12;
+        const bx = Math.min(sel.startX, sel.endX) - pad;
+        const by = Math.min(sel.startY, sel.endY) - pad;
+        const bw = Math.abs(sel.endX - sel.startX) + pad * 2;
+        const bh = Math.abs(sel.endY - sel.startY) + pad * 2;
+        ctx.setLineDash([6, 3]); ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
+        drawHandle(ctx, bx,      by,      circleshandles, sid, "topleft");
+        drawHandle(ctx, bx + bw, by,      circleshandles, sid, "topright");
+        drawHandle(ctx, bx,      by + bh, circleshandles, sid, "bottomleft");
+        drawHandle(ctx, bx + bw, by + bh, circleshandles, sid, "bottomright");
     }
 }
 
@@ -345,8 +404,23 @@ function isPointInShape(shape: shapes, x: number, y: number, ctx: CanvasRenderin
         const pad = 20;
         return x >= shape.x - pad && x <= shape.x + w + pad
             && y >= shape.y - pad && y <= shape.y + h + pad;
+    } else if (shape.type === "arrow") {
+        const threshold = 10;
+        const { startX, startY, endX, endY } = shape;
+        const dist = pointToLineDistance(x, y, startX, startY, endX, endY);
+        return dist <= threshold;
     }
     return false;
+}
+
+function pointToLineDistance(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = lenSq !== 0 ? dot / lenSq : -1;
+    param = Math.max(0, Math.min(1, param));
+    const nearX = x1 + param * C, nearY = y1 + param * D;
+    return Math.hypot(px - nearX, py - nearY);
 }
 
 function drawHandle(ctx: CanvasRenderingContext2D, x: number, y: number, handles: handles[], id: number, pos: handles["position"]) {
@@ -364,4 +438,21 @@ function isHandleClicked(handles: handles[], x: number, y: number) {
         if (Math.hypot(x - h.x, y - h.y) <= h.r + 4) return h.position;
     }
     return null;
+}
+
+function drawArrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number) {
+    const headLen = 15;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
 }
