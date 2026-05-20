@@ -55,6 +55,7 @@ export function ChatRoomClient({
             }
         }
     }, [socket, loading, id]);
+    
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
